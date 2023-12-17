@@ -93,6 +93,152 @@ print(''.join(lst2))
 ```
 ***Flag:KCSC{Cam_on_vi_da_kien_nhan_nhin_het_dong_anh_nay`}***
 
+### dynamic_function(bài này thi xong em mới giải ra)
+
+![image](https://github.com/m01000xd/KCSC-BCM/assets/122852491/d1c98a6a-3ac7-4811-9118-7e380258b69d)
+
+Đầu tiên là ```fgets(Buffer, 32,v3)```, Buffer đọc 32 kí tự từ v3.
+
+Xuống tới đây:
+
+```  if ( j_strlen(Buffer) == 30 && (Str = (char *)sub_4113ED(Buffer)) != 0 && j_strlen(Str) == 24 )```
+Đoạn này sẽ check độ dài Buffer phải = 30 và thêm yêu cầu về hàm ```sub_4113ED```:
+
+![image](https://github.com/m01000xd/KCSC-BCM/assets/122852491/7cfe698c-b35a-4048-a832-aa9ba6623d18)
+
+Hàm ```sub_4113ED``` sẽ dẫn đến 1 hàm khác, ```sub_411890```. Hàm này sẽ check coi Buffer có bắt đầu bằng ```KCSC{``` và kết thúc = ```}``` không và trả về đoạn chuỗi bị kẹp trong 2 dấu ngoặc {}.
+
+Tóm lại, ```  if ( j_strlen(Buffer) == 30 && (Str = (char *)sub_4113ED(Buffer)) != 0 && j_strlen(Str) == 24 )``` sẽ check Buffer phải = 30, và đoạn kí tự ở trong Buffer.
+
+Tiếp theo, ở dòng này:
+
+```    lpAddress = (void (__cdecl *)(char *, char *, size_t))VirtualAlloc(0, 0xA4u, 0x1000u, 0x40u);```
+
+Nhìn vào đây, thì có thể thấy lpAddress là 1 con trỏ hàm. Còn hàm VirtuallAlloc, là 1 hàm Win32, được sử dụng để cấp phát bộ nhớ ảo trong quá trình thực thi của một chương trình:
+```
+LPVOID VirtualAlloc(
+  LPVOID lpAddress,
+  SIZE_T dwSize,
+  DWORD  flAllocationType,
+  DWORD  flProtect
+);
+
+lpAddress: Địa chỉ bắt đầu của vùng bộ nhớ ảo cần cấp phát
+dwSize: Kích thước của vùng bộ nhớ ảo cần cấp phát, tính bằng byte.
+flAllocationType: Loại cấp phát.
+flProtect: Quyền truy cập cho vùng bộ nhớ
+```
+
+Ở đây, hiểu đơn giản là địa chỉ của vùng nhớ mới sẽ được cấp phát vào lpAddress.
+
+Tiếp theo, đoạn này:
+```
+    if ( lpAddress )
+    {
+      for ( i = 0; i < 0xA4; ++i )
+        *((_BYTE *)lpAddress + i) = byte_417C50[i] ^ 0x41;
+      v5 = j_strlen(Str);
+      lpAddress(Str, v12, v5);
+      VirtualFree(lpAddress, 0xA4u, 0x8000u);
+```
+
+Hiểu nôm na, trong vòng for thực hiện xor từng phần tử của mảng ```byte_417C50``` với 0x41, và lưu lần lượt theo thứ tự 4 byte 1 vào địa chỉ của con trỏ lpAdress. Với đoạn ```lpAdress(Str, v12, v5)``` khá khó hiểu, ta để yên ở đó. ```VirtualFree(lpAddress, 0xA4u, 0x8000u)``` sẽ giải phóng vùng nhớ lpAddress sau khi chạy xong đoạn code trước đó.
+
+Ta lại xuống dưới:
+
+```
+      for ( j = 0; j < j_strlen(Str); ++j )
+      {
+        if ( v12[j] != byte_417CF4[j] )
+          goto LABEL_18;
+      }
+      sub_4110D7("Not uncorrect ^_^", v7);
+      return 0;
+    }
+    else
+    {
+      perror("VirtualAlloc failed");
+      return 1;
+    }
+  }
+  else
+  {
+LABEL_18:
+    sub_4110D7("Not correct @_@", v7);
+    return 0;
+  }
+}
+```
+
+
+Đoạn code sẽ kiểm tra xem từng kí tự trong ```v12``` có = từng kí tự trong mảng ```byte_417CF4``` không.Nếu đúng hết, thì flag của mình nhập là đúng.
+
+Ở dòng này, ```      for ( j = 0; j < j_strlen(Str); ++j )```, chuột phải, chọn Synchronize with IDA View-A, rồi sang code assembly:
+
+![image](https://github.com/m01000xd/KCSC-BCM/assets/122852491/af014a53-8c5b-4463-9860-4724219ffacf)
+
+Đặt breakpoint ở đoạn ```cmp [ebp+var_70], eax```, sau đó F9 để debug, nhập bừa flag:
+
+![image](https://github.com/m01000xd/KCSC-BCM/assets/122852491/0f59b032-b51e-4cc1-b3b6-141683d233df)
+
+```v12``` của chúng ta trả về 1 chuỗi kí tự không khớp với các kí tự trong mảng cần so sánh. Tự hỏi rằng tại sao nó lại trả về như vậy ?
+
+Quay lại với đoạn ```lpAdress(Str, v12, v5)```, khi ta đặt breakpoint ở đây, v12 lại ra 1 chuỗi kí tự khác. F7 để vào xem bên trong hàm này có gì:
+
+![image](https://github.com/m01000xd/KCSC-BCM/assets/122852491/dce383bc-c2f5-468d-913a-9f218dc97d3a)
+
+Chuột phải, Creat function, rồi F5:
+
+![image](https://github.com/m01000xd/KCSC-BCM/assets/122852491/1c25fa8b-2167-4835-bb62-9fc522502068)
+
+
+Đổi lại tên hàm(lpAdress),biến(Str,v12,v5) và hide cast:
+
+![image](https://github.com/m01000xd/KCSC-BCM/assets/122852491/ab25dbc8-dfca-4186-a4c7-03f2fe64a4a9)
+
+Ở đây, v4 chính là chuỗi ```'reversing_is_pretty_cool``` ,*&v4[13] có thể xem như 1 biến đếm i, với i ban đầu được set = 0. Đoạn code trên có thể được sửa lại bằng python như sau:
+
+```python
+i = 0
+while (i < 24):
+	v4[12] = 16 *(ord(Str[i]) % 16) + ord(Str[i]) // 16
+	v12[i] = v4[12] ^ v4[i]
+	i += 1
+```
+
+Như vậy, ta đã hiểu tại sao khi đặt breakpoint ở 2 dòng khác nhau, ```v12``` lại trả về các kết quả khác nhau.
+
+Bây giờ, các kí tự trong ```v12``` phải chính là các kí tự trong mảng đem đi check. Sau đó mình đem đi xor lại sẽ ra được 1 giá trị riêng, với mỗi giá trị đó chỉ có 1 kí tự flag khớp: ```16*(ord(Str[i]) % 16) + ord(Str[i]) // 16```. Tạo 1 xâu rỗng rồi cộng dồn, sẽ ra được flag:
+
+```python
+v4 = 'reversing_is_pretty_cool'
+v12 = [0x44, 0x93, 0x51, 0x42, 0x24, 0x45, 0x2E, 0x9B, 0x01, 0x99, 0x7F, 0x05, 0x4D, 0x47, 0x25, 0x43, 0xA2, 0xE2, 0x3E, 0xAA, 0x85, 0x99, 0x18, 0x7E]
+v4 = [ord(i) for i in v4]
+Str1 = ''
+for j in range(24):
+	a = v12[j] ^ v4[j]
+	for i in range(256):
+		if (16 *(i % 16) + i//16) == a:
+			Str1 += chr(i)
+flag = "KCSC{" + Str1 + "}"
+print(flag)
+```
+
+Ở đây, vì flag của chúng ta luôn nằm trong 256 kí tự trong bảng mã ASCII, ta có thể check bằng cách brute force như vậy.
+
+***Flag:KCSC{correct_flag!submit_now!}***
+
+
+
+
+
+
+
+
+
+
+
+
 ## Crypto
 
 ### Ez_Ceasar
