@@ -228,8 +228,33 @@ print(flag)
 
 ***Flag:KCSC{correct_flag!submit_now!}***
 
+### Awg Mah Back(bài này thi xong e mới giải ra)
 
+Bài này đổi lại file đọc từ file flag thành file output rồi thay biến flag = biến enc sẽ ra flag:
 
+```python
+from pwn import *
+import base64
+with open('output.txt', 'rb') as (f):
+    enc = f.read()
+a_enc = enc[0:len(enc) // 3]
+b_enc = enc[len(enc) // 3:2 * len(enc) // 3]
+c_enc = enc[2* len(enc) // 3:]
+c_step1 = xor(c_enc, int(str(len(enc))[0]) * int(str(len(enc))[1]))
+c_step2 = xor(b_enc, c_step1)
+b_step = xor(a_enc, b_enc)
+a_step = xor(c_step2, a_enc)
+c_flag = xor(b_step, c_step2)
+b_flag = xor(a_step, b_step)
+a_flag = xor(a_step , int(str(len(enc))[0]) + int(str(len(enc))[1]))
+flag = a_flag + b_flag + c_flag
+for i in range(3):
+    flag = base64.b64decode(flag)
+print(flag.decode('ascii'))    
+##with open('flag.txt', 'wb') as (f):
+##    f.write(flag)
+```
+***Flag:KCSC{84cK_t0_BaCK_To_B4ck_X0r`_4nD_864_oM3g4LuL}***
 
 
 
